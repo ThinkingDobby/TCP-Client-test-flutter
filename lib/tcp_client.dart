@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 
-import 'package:get_ip/get_ip.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:get_ip/get_ip.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 
 
 class TCPClient extends StatefulWidget {
@@ -37,14 +37,18 @@ class _TCPClientState extends State<TCPClient> {
     );
   }
 
-  void sendBtnClicked() {
-    client.sendRequest();
+  void sendBtnClicked() async {
+    await client.sendRequest();
     client.sendData();
   }
 }
 
 class BasicTestClient {
-  String _host = "127.0.0.1";
+  String _host = "192.168.35.69";
+  // 192.168.35.25
+  // 192.168.1.99
+  // 10.0.2.2
+  // 127.0.0.1
   int _port = 10001;
   int _bufSize = 1024;
 
@@ -55,8 +59,9 @@ class BasicTestClient {
     _port = port;
   }
 
-  void sendRequest() async {
+  Future<void> sendRequest() async {
     clntSocket = await Socket.connect(_host, _port);
+    print("Connected");
   }
 
   void sendData() async{
@@ -65,13 +70,13 @@ class BasicTestClient {
     //
     // }
 
-    // 임시 코드 - "hello" 전달
-    clntSocket.add(utf8.encode("hello"));
-
     clntSocket.listen((List<int> event) {
       // 임시
       print(utf8.decode(event));
     });
+
+    // 임시 코드 - "hello" 전달
+    clntSocket.add(utf8.encode("hello"));
 
     // 임시 코드 - 5초 대기
     await Future.delayed(const Duration(seconds: 5));
