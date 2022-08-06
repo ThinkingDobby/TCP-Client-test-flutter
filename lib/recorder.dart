@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'file/file_loader.dart';
+import 'package:tcp_client_test/file_functions/file_loader.dart';
 
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:assets_audio_player/assets_audio_player.dart';
@@ -30,7 +30,8 @@ class _RecorderState extends State<Recorder> {
 
   // 녹음 위한 파일 경로 (저장소 경로 + 파일명)
   late String _filePathForRecord;
-  
+
+  // 파일 로드, 삭제 위한 객체
   var fl = FileLoader();
 
   @override

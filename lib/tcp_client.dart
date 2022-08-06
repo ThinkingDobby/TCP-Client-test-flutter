@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:tcp_client_test/main.dart';
-import 'file/file_loader.dart';
+import 'package:tcp_client_test/file_functions/file_loader.dart';
 
 import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:tcp_client_test/tcp_clients/file_transfer_test_client.dart';
 
 class TCPClient extends StatefulWidget {
 
@@ -16,11 +18,10 @@ class TCPClient extends StatefulWidget {
 }
 
 class _TCPClientState extends State<TCPClient> {
-
   String _receivedData = "temp";
   final TextEditingController _fileNameController = TextEditingController(text: "hello");
 
-  late BasicTestClient client;
+  late FileTransferTestClient client;
 
   // 재생 위한 객체 저장
   final audioPlayer = AssetsAudioPlayer();
@@ -28,12 +29,13 @@ class _TCPClientState extends State<TCPClient> {
   // 상태 저장
   bool _isPlaying = false;
 
+  // 파일 로드, 삭제 위한 객체
   var fl = FileLoader();
 
   @override
   void initState() {
     super.initState();
-    client = BasicTestClient();
+    client = FileTransferTestClient();
     initializer();
   }
 
@@ -155,7 +157,18 @@ class _TCPClientState extends State<TCPClient> {
 
   void sendData() async {
     String fileName = _fileNameController.text;
-    client.sendMessage(fileName);
+    try {
+      Uint8List data = await readFile("${fl.storagePath}/$fileName");
+      client.sendFile(data);
+    } on FileSystemException {
+      print("File not exists: $fileName");
+    }
+  }
+
+  Future<Uint8List> readFile(String filePath) async {
+    print(filePath);
+    Uint8List data = File(filePath).readAsBytesSync();
+    return data;
   }
 
   void stopCon() {
@@ -192,32 +205,5 @@ class _TCPClientState extends State<TCPClient> {
   Future<void> stopPlaying() async {
     // 재생 중지
     audioPlayer.stop();
-  }
-}
-
-class BasicTestClient {
-  String _host = "192.168.35.69";
-  int _port = 10001;
-
-  late Socket clntSocket;
-
-  void setServAddr(String host, int port) {
-    _host = host;
-    _port = port;
-  }
-
-  Future<void> sendRequest() async {
-    clntSocket = await Socket.connect(_host, _port);
-    // print("Connected");
-  }
-
-  void sendMessage(String data) async{
-    // 임시 코드 - "hello" 전달
-    clntSocket.add(utf8.encode(data));
-  }
-
-  void stopClnt() {
-    clntSocket.close();
-    // print("Disconnected");
   }
 }
