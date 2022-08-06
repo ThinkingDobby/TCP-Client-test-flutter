@@ -1,33 +1,36 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-
-import 'package:assets_audio_player/assets_audio_player.dart';
+import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-import 'package:tcp_client_test/main.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:assets_audio_player/assets_audio_player.dart';
 
-class TCPClient extends StatefulWidget {
-
+class Recorder extends StatefulWidget {
   @override
-  State createState() => _TCPClientState();
+  State createState() => _RecorderState();
 }
 
-class _TCPClientState extends State<TCPClient> {
-
-  String _receivedData = "temp";
-  final TextEditingController _fileNameController = TextEditingController(text: "hello");
-
-  late BasicTestClient client;
+class _RecorderState extends State<Recorder> {
+  // 녹음 위한 객체 저장
+  late FlutterSoundRecorder _recordingSession;
 
   // 재생 위한 객체 저장
-  final audioPlayer = AssetsAudioPlayer();
+  final recordingPlayer = AssetsAudioPlayer();
 
   // 상태 저장
+  bool _isRecording = false;
   bool _isPlaying = false;
 
   //  저장소 경로
   late String _storagePath;
+
+  // 녹음 위한 파일 경로 (저장소 경로 + 파일명)
+  late String _filePathForRecord;
 
   // 재생 위해 선택된 파일
   String _selectedFile = '-1';
@@ -38,14 +41,13 @@ class _TCPClientState extends State<TCPClient> {
   @override
   void initState() {
     super.initState();
-    client = BasicTestClient();
     initializer();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("TCP Client Test")),
+      appBar: AppBar(title: const Text("Recording Test")),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
@@ -53,32 +55,25 @@ class _TCPClientState extends State<TCPClient> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget> [
-              ElevatedButton(onPressed: () async {
-                await Navigator.pushNamed(context, RECORDER_PAGE);
-                setState((){
-                  _fileList = loadFiles();
-                });
-              }, child: const Text("녹음기"))
+              ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text("메인"))
             ],
           ),
-          const SizedBox(height: 16),
-          Text(_receivedData),
-          const SizedBox(height: 16),
-          TextFormField(
-            keyboardType: TextInputType.text,
-            controller: _fileNameController,
-          ),
-          const SizedBox(height: 8),
+          // 녹음 관련
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget> [
-              ElevatedButton(onPressed: startCon, child: const Text("시작")),
+            children: <Widget>[
+              ElevatedButton(
+                // 녹음 중일 때는 비활성화, 녹음 중이 아니면 녹음 시작
+                  onPressed: _isRecording ? null : startRecording,
+                  child: const Text("녹음 시작")),
               const SizedBox(width: 16),
-              ElevatedButton(onPressed: stopCon, child: const Text("중지")),
-              const SizedBox(width: 16),
-              ElevatedButton(onPressed: sendData, child: const Text("전송"))
+              ElevatedButton(
+                // 녹음 중이 아닐 때는 비활성화, 녹음 중이면 녹음 중지
+                  onPressed: _isRecording ? stopRecording : null,
+                  child: const Text("녹음 중지")),
             ],
           ),
+          const SizedBox(height: 22),
           const SizedBox(height: 32),
           // 파일 리스트
           Expanded(
@@ -124,12 +119,12 @@ class _TCPClientState extends State<TCPClient> {
                         });
                       },
                       style:
-                      ElevatedButton.styleFrom(primary: Colors.redAccent),
+                          ElevatedButton.styleFrom(primary: Colors.redAccent),
                       child: const Text("전체 삭제")))
             ],
           )
-        ]
-      )
+        ],
+      ),
     );
   }
 
@@ -144,24 +139,9 @@ class _TCPClientState extends State<TCPClient> {
     if (_fileList.isNotEmpty) {
       _selectedFile = _fileList[0];
     }
-  }
 
-  void startCon() async {
-    await client.sendRequest();
-    client.clntSocket.listen((List<int> event) {
-      setState(() {
-        _receivedData = utf8.decode(event);
-      });
-    });
-  }
-
-  void sendData() async {
-    String fileName = _fileNameController.text;
-    client.sendMessage(fileName);
-  }
-
-  void stopCon() {
-    client.stopClnt();
+    // 녹음 위한 FlutterSoundRecorder 객체 설정
+    setRecordingSession();
   }
 
   List<String> loadFiles() {
@@ -174,6 +154,9 @@ class _TCPClientState extends State<TCPClient> {
         files.add(getFilenameFromPath(file.path));
       }
     }
+
+    // 다음 파일명 설정
+    _filePathForRecord = '$_storagePath/temp${files.length + 1}.wav';
 
     return files;
   }
@@ -203,15 +186,68 @@ class _TCPClientState extends State<TCPClient> {
         });
   }
 
+  setRecordingSession() async {
+    // 객체 설정
+    _recordingSession = FlutterSoundRecorder();
+    await _recordingSession.openAudioSession(
+        focus: AudioFocus.requestFocusAndStopOthers,
+        category: SessionCategory.playAndRecord,
+        mode: SessionMode.modeDefault,
+        device: AudioDevice.speaker);
+    await _recordingSession
+        .setSubscriptionDuration(const Duration(milliseconds: 10));
+    await initializeDateFormatting();
+
+    // 권한 요청
+    await Permission.microphone.request();
+    await Permission.storage.request();
+    await Permission.manageExternalStorage.request();
+  }
+
+  Future<void> startRecording() async {
+    setState(() {
+      _isRecording = true;
+    });
+    // print("filePathForRecording: $_filePathForRecord");
+    Directory directory = Directory(dirname(_filePathForRecord));
+    if (!directory.existsSync()) {
+      directory.createSync();
+    }
+    _recordingSession.openAudioSession();
+    // 녹음 시작
+    await _recordingSession.startRecorder(
+      toFile: _filePathForRecord,
+      codec: Codec.pcm16WAV,
+    );
+  }
+
+  Future<String?> stopRecording() async {
+    setState(() {
+      _isRecording = false;
+    });
+    // 녹음 중지
+    _recordingSession.closeAudioSession();
+
+    setState(() {
+      bool first = _fileList.isEmpty ? true : false;
+      // 파일 리스트 갱신
+      _fileList = loadFiles();
+      if (first) {
+        _selectedFile = _fileList[0];
+      }
+    });
+    return await _recordingSession.stopRecorder();
+  }
+
   Future<void> startPlaying() async {
     // 재생
-    audioPlayer.open(
+    recordingPlayer.open(
       Audio.file('$_storagePath/$_selectedFile'),
       autoStart: true,
       showNotification: true,
     );
     // print("filePathForPlaying $_storagePath/$_selectedFile");
-    audioPlayer.playlistAudioFinished.listen((event) {
+    recordingPlayer.playlistAudioFinished.listen((event) {
       setState(() {
         _isPlaying = false;
       });
@@ -220,7 +256,7 @@ class _TCPClientState extends State<TCPClient> {
 
   Future<void> stopPlaying() async {
     // 재생 중지
-    audioPlayer.stop();
+    recordingPlayer.stop();
   }
 
   deleteFiles() {
@@ -230,32 +266,5 @@ class _TCPClientState extends State<TCPClient> {
         file.delete();
       }
     }
-  }
-}
-
-class BasicTestClient {
-  String _host = "192.168.35.69";
-  int _port = 10001;
-
-  late Socket clntSocket;
-
-  void setServAddr(String host, int port) {
-    _host = host;
-    _port = port;
-  }
-
-  Future<void> sendRequest() async {
-    clntSocket = await Socket.connect(_host, _port);
-    // print("Connected");
-  }
-
-  void sendMessage(String data) async{
-    // 임시 코드 - "hello" 전달
-    clntSocket.add(utf8.encode(data));
-  }
-
-  void stopClnt() {
-    clntSocket.close();
-    // print("Disconnected");
   }
 }
