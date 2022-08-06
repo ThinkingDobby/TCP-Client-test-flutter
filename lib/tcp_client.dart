@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 
-// import 'package:get_ip/get_ip.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-
-
 class TCPClient extends StatefulWidget {
 
   @override
@@ -16,7 +12,6 @@ class _TCPClientState extends State<TCPClient> {
   String _receivedData = "temp";
 
   late BasicTestClient client;
-
 
   @override
   void initState() {
@@ -29,28 +24,38 @@ class _TCPClientState extends State<TCPClient> {
     return Scaffold(
       appBar: AppBar(title: const Text("TCP Client Test")),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Text(_receivedData),
-          ElevatedButton(onPressed: sendBtnClicked, child: const Text("전송"))
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget> [
+              ElevatedButton(onPressed: startCon, child: const Text("시작")),
+              ElevatedButton(onPressed: stopCon, child: const Text("중지")),
+              ElevatedButton(onPressed: sendData, child: const Text("전송"))
+            ],
+          )
         ]
       )
     );
   }
 
-  void sendBtnClicked() async {
+  void startCon() async {
     await client.sendRequest();
-    client.sendData();
+  }
+
+  void sendData() async {
+    client.sendMessage("hello");
+  }
+
+  void stopCon() {
+    client.stopClnt();
   }
 }
 
 class BasicTestClient {
   String _host = "192.168.35.69";
-  // 192.168.35.25
-  // 192.168.1.99
-  // 10.0.2.2
-  // 127.0.0.1
   int _port = 10001;
-  int _bufSize = 1024;
 
   late Socket clntSocket;
 
@@ -62,25 +67,15 @@ class BasicTestClient {
   Future<void> sendRequest() async {
     clntSocket = await Socket.connect(_host, _port);
     print("Connected");
-  }
-
-  void sendData() async{
-    // 전송할 데이터 입력부
-    // while (true) {
-    //
-    // }
-
     clntSocket.listen((List<int> event) {
       // 임시
       print(utf8.decode(event));
     });
+  }
 
+  void sendMessage(String data) async{
     // 임시 코드 - "hello" 전달
-    clntSocket.add(utf8.encode("hello"));
-
-    // 임시 코드 - 5초 대기
-    await Future.delayed(const Duration(seconds: 5));
-    stopClnt();
+    clntSocket.add(utf8.encode(data));
   }
 
   void stopClnt() {
