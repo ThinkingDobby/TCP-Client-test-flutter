@@ -10,6 +10,7 @@ class TCPClient extends StatefulWidget {
 
 class _TCPClientState extends State<TCPClient> {
   String _receivedData = "temp";
+  final TextEditingController _fileNameController = TextEditingController(text: "hello");
 
   late BasicTestClient client;
 
@@ -27,6 +28,10 @@ class _TCPClientState extends State<TCPClient> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Text(_receivedData),
+          TextFormField(
+            keyboardType: TextInputType.text,
+            controller: _fileNameController,
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget> [
@@ -42,10 +47,16 @@ class _TCPClientState extends State<TCPClient> {
 
   void startCon() async {
     await client.sendRequest();
+    client.clntSocket.listen((List<int> event) {
+      setState(() {
+        _receivedData = utf8.decode(event);
+      });
+    });
   }
 
   void sendData() async {
-    client.sendMessage("hello");
+    String fileName = _fileNameController.text;
+    client.sendMessage(fileName);
   }
 
   void stopCon() {
@@ -66,11 +77,7 @@ class BasicTestClient {
 
   Future<void> sendRequest() async {
     clntSocket = await Socket.connect(_host, _port);
-    print("Connected");
-    clntSocket.listen((List<int> event) {
-      // 임시
-      print(utf8.decode(event));
-    });
+    // print("Connected");
   }
 
   void sendMessage(String data) async{
@@ -80,6 +87,6 @@ class BasicTestClient {
 
   void stopClnt() {
     clntSocket.close();
-    print("Disconnected");
+    // print("Disconnected");
   }
 }
