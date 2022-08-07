@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 class FileLoader {
   //  저장소 경로
@@ -44,5 +45,11 @@ class FileLoader {
         file.delete();
       }
     }
+  }
+
+  Future<Uint8List> readFile(String filePath) async {
+    print(filePath);
+    Uint8List data = File(filePath).readAsBytesSync();
+    return data;
   }
 }

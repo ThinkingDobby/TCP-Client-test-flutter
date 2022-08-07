@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'package:tcp_client_test/file_functions/file_loader.dart';
+import 'package:tcp_client_test/file/file_loader.dart';
 
 import 'package:flutter_sound/flutter_sound.dart';
 import 'package:assets_audio_player/assets_audio_player.dart';
@@ -22,7 +22,7 @@ class _RecorderState extends State<Recorder> {
   late FlutterSoundRecorder _recordingSession;
 
   // 재생 위한 객체 저장
-  final audioPlayer = AssetsAudioPlayer();
+  final _audioPlayer = AssetsAudioPlayer();
 
   // 상태 저장
   bool _isRecording = false;
@@ -32,12 +32,12 @@ class _RecorderState extends State<Recorder> {
   late String _filePathForRecord;
 
   // 파일 로드, 삭제 위한 객체
-  var fl = FileLoader();
+  final _fl = FileLoader();
 
   @override
   void initState() {
     super.initState();
-    initializer();
+    _initializer();
   }
 
   @override
@@ -60,12 +60,12 @@ class _RecorderState extends State<Recorder> {
             children: <Widget>[
               ElevatedButton(
                 // 녹음 중일 때는 비활성화, 녹음 중이 아니면 녹음 시작
-                  onPressed: _isRecording ? null : startRecording,
+                  onPressed: _isRecording ? null : _startRecording,
                   child: const Text("녹음 시작")),
               const SizedBox(width: 16),
               ElevatedButton(
                 // 녹음 중이 아닐 때는 비활성화, 녹음 중이면 녹음 중지
-                  onPressed: _isRecording ? stopRecording : null,
+                  onPressed: _isRecording ? _stopRecording : null,
                   child: const Text("녹음 중지")),
             ],
           ),
@@ -77,7 +77,7 @@ class _RecorderState extends State<Recorder> {
               child: ListView.builder(
                 scrollDirection: Axis.vertical,
                 shrinkWrap: true,
-                itemCount: fl.fileList.length,
+                itemCount: _fl.fileList.length,
                 itemBuilder: (context, i) => _setListItemBuilder(context, i),
               )),
           // 재생 관련
@@ -88,14 +88,14 @@ class _RecorderState extends State<Recorder> {
                   padding: const EdgeInsets.fromLTRB(0, 0, 8, 32),
                   child: ElevatedButton(
                       onPressed: () {
-                        if (fl.fileList.isNotEmpty) {
-                          // print("test: $_isPlaying, ${fl.selectedFile}");
+                        if (_fl.fileList.isNotEmpty) {
+                          // print("test: $_isPlaying, ${_fl.selectedFile}");
                           if (!_isPlaying) {
                             // 재생 중이 아니면 재생
-                            startPlaying();
+                            _startPlaying();
                           } else {
                             // 재생 중이면 재생 중지
-                            stopPlaying();
+                            _stopPlaying();
                           }
 
                           setState(() {
@@ -109,10 +109,10 @@ class _RecorderState extends State<Recorder> {
                   child: ElevatedButton(
                       onPressed: () async {
                         // 녹음한 파일 모두 삭제
-                        await fl.deleteFiles();
+                        await _fl.deleteFiles();
                         setState(() {
-                          fl.fileList = fl.loadFiles();
-                          setPathForRecord();
+                          _fl.fileList = _fl.loadFiles();
+                          _setPathForRecord();
                         });
                       },
                       style:
@@ -125,40 +125,40 @@ class _RecorderState extends State<Recorder> {
     );
   }
 
-  void initializer() async {
+  void _initializer() async {
     // 내부저장소 경로 로드
     var docsDir = await getApplicationDocumentsDirectory();
-    fl.storagePath = docsDir.path;
+    _fl.storagePath = docsDir.path;
     setState(() {
       // 파일 리스트 초기화
-      fl.fileList = fl.loadFiles();
-      setPathForRecord();
+      _fl.fileList = _fl.loadFiles();
+      _setPathForRecord();
     });
-    if (fl.fileList.isNotEmpty) {
-      fl.selectedFile = fl.fileList[0];
+    if (_fl.fileList.isNotEmpty) {
+      _fl.selectedFile = _fl.fileList[0];
     }
 
     // 녹음 위한 FlutterSoundRecorder 객체 설정
-    setRecordingSession();
+    _setRecordingSession();
   }
 
-  setPathForRecord() {
-    _filePathForRecord = '${fl.storagePath}/temp${fl.fileList.length + 1}.wav';
+  _setPathForRecord() {
+    _filePathForRecord = '${_fl.storagePath}/temp${_fl.fileList.length + 1}.wav';
   }
 
   RadioListTile _setListItemBuilder(BuildContext context, int i) {
     return RadioListTile(
-        title: Text(fl.fileList[i]),
-        value: fl.fileList[i],
-        groupValue: fl.selectedFile,
+        title: Text(_fl.fileList[i]),
+        value: _fl.fileList[i],
+        groupValue: _fl.selectedFile,
         onChanged: (val) {
           setState(() {
-            fl.selectedFile = fl.fileList[i];
+            _fl.selectedFile = _fl.fileList[i];
           });
         });
   }
 
-  setRecordingSession() async {
+  _setRecordingSession() async {
     // 객체 설정
     _recordingSession = FlutterSoundRecorder();
     await _recordingSession.openAudioSession(
@@ -176,7 +176,7 @@ class _RecorderState extends State<Recorder> {
     await Permission.manageExternalStorage.request();
   }
 
-  Future<void> startRecording() async {
+  Future<void> _startRecording() async {
     setState(() {
       _isRecording = true;
     });
@@ -193,7 +193,7 @@ class _RecorderState extends State<Recorder> {
     );
   }
 
-  Future<String?> stopRecording() async {
+  Future<String?> _stopRecording() async {
     setState(() {
       _isRecording = false;
     });
@@ -202,32 +202,32 @@ class _RecorderState extends State<Recorder> {
 
     setState(() {
       // 파일 리스트 갱신
-      fl.fileList = fl.loadFiles();
-      setPathForRecord();
-      if (fl.fileList.length == 1) {
-        fl.selectedFile = fl.fileList[0];
+      _fl.fileList = _fl.loadFiles();
+      _setPathForRecord();
+      if (_fl.fileList.length == 1) {
+        _fl.selectedFile = _fl.fileList[0];
       }
     });
     return await _recordingSession.stopRecorder();
   }
 
-  Future<void> startPlaying() async {
+  Future<void> _startPlaying() async {
     // 재생
-    audioPlayer.open(
-      Audio.file('${fl.storagePath}/${fl.selectedFile}'),
+    _audioPlayer.open(
+      Audio.file('${_fl.storagePath}/${_fl.selectedFile}'),
       autoStart: true,
       showNotification: true,
     );
-    // print("filePathForPlaying ${fl.storagePath}/${fl.selectedFile}");
-    audioPlayer.playlistAudioFinished.listen((event) {
+    // print("filePathForPlaying ${_fl.storagePath}/${_fl.selectedFile}");
+    _audioPlayer.playlistAudioFinished.listen((event) {
       setState(() {
         _isPlaying = false;
       });
     });
   }
 
-  Future<void> stopPlaying() async {
+  Future<void> _stopPlaying() async {
     // 재생 중지
-    audioPlayer.stop();
+    _audioPlayer.stop();
   }
 }
