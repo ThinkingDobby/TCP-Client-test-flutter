@@ -18,8 +18,9 @@ class TCPClient extends StatefulWidget {
 }
 
 class _TCPClientState extends State<TCPClient> {
-  String _receivedData = "temp";
-  final TextEditingController _fileNameController = TextEditingController(text: "hello");
+  String _state = "Unconnected";
+  final TextEditingController _IPAddrController = TextEditingController(text: "192.168.35.69");
+  late String _servIPAddr;
 
   late FileTransferTestClient _client;
 
@@ -31,6 +32,8 @@ class _TCPClientState extends State<TCPClient> {
 
   // 파일 로드, 삭제 위한 객체
   final _fl = FileLoader();
+
+  final String FIN_CODE = "Transfer Finished";
 
   @override
   void initState() {
@@ -46,7 +49,7 @@ class _TCPClientState extends State<TCPClient> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget> [
@@ -58,18 +61,21 @@ class _TCPClientState extends State<TCPClient> {
                 if (_fl.fileList.isNotEmpty) {
                   _fl.selectedFile = _fl.fileList[0];
                 }
-              }, child: const Text("녹음기"))
+              }, child: const Text("녹음기")),
+              const SizedBox(width: 16)
             ],
           ),
           const SizedBox(height: 16),
-          Text(_receivedData),
+          Text(_state),
+          const SizedBox(height: 8),
+          Text(_servIPAddr),
           const SizedBox(height: 16),
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16.0),
             child: TextFormField(
               keyboardType: TextInputType.text,
               decoration: const InputDecoration(border:OutlineInputBorder()),
-              controller: _fileNameController,
+              controller: _IPAddrController,
             )
           ),
           const SizedBox(height: 8),
@@ -80,7 +86,7 @@ class _TCPClientState extends State<TCPClient> {
               const SizedBox(width: 16),
               ElevatedButton(onPressed: _stopCon, child: const Text("중지")),
               const SizedBox(width: 16),
-              ElevatedButton(onPressed: _sendData, child: const Text("전송"))
+              ElevatedButton(onPressed: _setServIPAddr, child: const Text("서버 IP 설정"))
             ],
           ),
           const SizedBox(height: 32),
@@ -118,7 +124,7 @@ class _TCPClientState extends State<TCPClient> {
                       },
                       child: Text(_isPlaying ? "재생 중지" : "음성 재생"))),
               Container(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 0, 32),
+                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 32),
                   child: ElevatedButton(
                       onPressed: () async {
                         // 녹음한 파일 모두 삭제
@@ -129,7 +135,13 @@ class _TCPClientState extends State<TCPClient> {
                       },
                       style:
                       ElevatedButton.styleFrom(primary: Colors.redAccent),
-                      child: const Text("전체 삭제")))
+                      child: const Text("전체 삭제"))),
+              Container(
+                  padding: const EdgeInsets.fromLTRB(8, 0, 0, 32),
+                  child: ElevatedButton(
+                      onPressed: _sendData, style: ElevatedButton.styleFrom(primary: Colors.greenAccent),
+                      child: const Text("전송"))
+              )
             ],
           )
         ]
@@ -148,29 +160,47 @@ class _TCPClientState extends State<TCPClient> {
     if (_fl.fileList.isNotEmpty) {
       _fl.selectedFile = _fl.fileList[0];
     }
+
+    _servIPAddr = _IPAddrController.text;
+  }
+  
+  void _setServIPAddr() {
+    String host = _IPAddrController.text;
+    _client.setServAddr(host, 10001);
+    setState((){
+      _servIPAddr = host;
+    });
   }
 
   void _startCon() async {
     await _client.sendRequest();
+    setState((){
+      _state = "Connected";
+    });
     _client.clntSocket.listen((List<int> event) {
       setState(() {
-        _receivedData = utf8.decode(event);
+        _state = utf8.decode(event);
+        if (_state == FIN_CODE) {
+          _client.clntSocket.done;
+        }
       });
     });
   }
 
   void _sendData() async {
-    String fileName = _fileNameController.text;
     try {
-      Uint8List data = await _fl.readFile("${_fl.storagePath}/$fileName");
+      Uint8List data = await _fl.readFile("${_fl.storagePath}/${_fl.selectedFile}");
       _client.sendFile(data);
     } on FileSystemException {
-      print("File not exists: $fileName");
+      print("File not exists: ${_fl.selectedFile}");
     }
   }
 
   void _stopCon() {
     _client.stopClnt();
+    setState((){
+      _state = "Disconnected";
+    });
   }
 
   RadioListTile _setListItemBuilder(BuildContext context, int i) {

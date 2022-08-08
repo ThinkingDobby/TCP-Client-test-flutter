@@ -7,5 +7,6 @@ class FileTransferTestClient extends BasicTestClient {
     // 파일 크기 먼저 전달
     clntSocket.write(data.length);
     clntSocket.add(data);
+    stopClnt();
   }
 }

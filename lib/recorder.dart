@@ -47,11 +47,12 @@ class _RecorderState extends State<Recorder> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget> [
-              ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text("메인"))
+              ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text("메인")),
+              const SizedBox(width: 16)
             ],
           ),
           // 녹음 관련
