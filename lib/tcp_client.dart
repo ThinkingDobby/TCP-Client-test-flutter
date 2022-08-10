@@ -190,7 +190,7 @@ class _TCPClientState extends State<TCPClient> {
   void _sendData() async {
     try {
       Uint8List data = await _fl.readFile("${_fl.storagePath}/${_fl.selectedFile}");
-      _client.sendFile(data);
+      _client.sendFile(1, data);  // 임시 - 타입 1
     } on FileSystemException {
       print("File not exists: ${_fl.selectedFile}");
     }
