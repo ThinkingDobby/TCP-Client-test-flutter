@@ -35,6 +35,9 @@ class _TCPClientState extends State<TCPClient> {
 
   final String FIN_CODE = "Transfer Finished";
 
+  // 실행 시간 측정 위한 객체
+  late Stopwatch stopwatch;
+
   @override
   void initState() {
     super.initState();
@@ -182,6 +185,7 @@ class _TCPClientState extends State<TCPClient> {
         _state = utf8.decode(event);
         if (_state == FIN_CODE) {
           _client.clntSocket.done;
+          print("time elapsed: ${stopwatch.elapsed}");
         }
       });
     });
@@ -190,6 +194,7 @@ class _TCPClientState extends State<TCPClient> {
   void _sendData() async {
     try {
       Uint8List data = await _fl.readFile("${_fl.storagePath}/${_fl.selectedFile}");
+      stopwatch = Stopwatch()..start();
       _client.sendFile(1, data);  // 임시 - 타입 1
     } on FileSystemException {
       print("File not exists: ${_fl.selectedFile}");
