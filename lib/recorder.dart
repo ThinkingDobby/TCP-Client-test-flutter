@@ -191,6 +191,7 @@ class _RecorderState extends State<Recorder> {
     await _recordingSession.startRecorder(
       toFile: _filePathForRecord,
       codec: Codec.pcm16WAV,
+      sampleRate: 16000,  // 테스트 위한 조정
     );
   }
 

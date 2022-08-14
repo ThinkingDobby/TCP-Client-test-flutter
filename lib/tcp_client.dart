@@ -129,13 +129,14 @@ class _TCPClientState extends State<TCPClient> {
               Container(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 32),
                   child: ElevatedButton(
-                      onPressed: () async {
-                        // 녹음한 파일 모두 삭제
-                        await _fl.deleteFiles();
-                        setState(() {
-                          _fl.fileList = _fl.loadFiles();
-                        });
-                      },
+                    onPressed: null,
+                      // onPressed: () async {
+                      //   // 녹음한 파일 모두 삭제
+                      //   await _fl.deleteFiles();
+                      //   setState(() {
+                      //     _fl.fileList = _fl.loadFiles();
+                      //   });
+                      // },
                       style:
                       ElevatedButton.styleFrom(primary: Colors.redAccent),
                       child: const Text("전체 삭제"))),
