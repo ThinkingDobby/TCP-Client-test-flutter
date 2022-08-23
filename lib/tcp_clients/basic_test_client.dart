@@ -16,7 +16,11 @@ class BasicTestClient {
   }
 
   Future<void> sendRequest() async {
-    clntSocket = await Socket.connect(_host, _port);
+    try {
+      clntSocket = await Socket.connect(_host, _port);
+    } on OSError {
+      sendRequest();
+    }
     // print("Connected");
   }
 
@@ -24,8 +28,8 @@ class BasicTestClient {
     clntSocket.add(utf8.encode(data));
   }
 
-  void stopClnt() {
-    clntSocket.close();
+  Future<void> stopClnt() async {
+    await clntSocket.close();
     // print("Disconnected");
   }
 }

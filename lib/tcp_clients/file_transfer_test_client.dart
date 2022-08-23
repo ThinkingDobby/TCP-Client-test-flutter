@@ -11,7 +11,7 @@ class FileTransferTestClient extends BasicTestClient {
       Uint8List header = Uint8List.fromList(
           [type] + Util.convertInt2Bytes(data.length, Endian.big, 4));
       clntSocket.add(header + data);
-      stopClnt();
+      await stopClnt();
     } else if (type == 3){
       var f32Data = data.buffer.asFloat32List();
       // 고속 푸리에 변환 함수 단순 적용
