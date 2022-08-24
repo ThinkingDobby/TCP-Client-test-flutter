@@ -6,12 +6,11 @@ import 'package:tcp_client_test/util/util.dart';
 import 'package:fftea/impl.dart';
 
 class FileTransferTestClient extends BasicTestClient {
-  void sendFile(int type, Uint8List data) async {
+  Future<void> sendFile(int type, Uint8List data) async {
     if (type == 1 || type == 2) {
       Uint8List header = Uint8List.fromList(
           [type] + Util.convertInt2Bytes(data.length, Endian.big, 4));
       clntSocket.add(header + data);
-      stopClnt();
     } else if (type == 3){
       var f32Data = data.buffer.asFloat32List();
       // 고속 푸리에 변환 함수 단순 적용

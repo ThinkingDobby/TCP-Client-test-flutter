@@ -33,10 +33,13 @@ class _TCPClientState extends State<TCPClient> {
   // 파일 로드, 삭제 위한 객체
   final _fl = FileLoader();
 
+  final String TEMP_FIN_CODE = "Transferred";
   final String FIN_CODE = "Transfer Finished";
 
   // 실행 시간 측정 위한 객체
-  late Stopwatch stopwatch;
+  late Stopwatch stopwatch1;
+  late Stopwatch stopwatch2;
+  int cnt = 10;
 
   @override
   void initState() {
@@ -85,7 +88,7 @@ class _TCPClientState extends State<TCPClient> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget> [
-              ElevatedButton(onPressed: _startCon, child: const Text("시작")),
+              ElevatedButton(onPressed: _sendControl, child: const Text("SC")),  // 임시 - 10회 반복
               const SizedBox(width: 16),
               ElevatedButton(onPressed: _stopCon, child: const Text("중지")),
               const SizedBox(width: 16),
@@ -176,26 +179,44 @@ class _TCPClientState extends State<TCPClient> {
     });
   }
 
+  void _sendControl() {
+    stopwatch1 = Stopwatch()..start();
+    _startCon();
+  }
+
   void _startCon() async {
     await _client.sendRequest();
     setState((){
       _state = "Connected";
     });
+
+    _sendData();
+
     _client.clntSocket.listen((List<int> event) {
       setState(() {
         _state = utf8.decode(event);
+        if (_state == TEMP_FIN_CODE) {
+          _client.clntSocket.done;
+          print("stopwatch2: ${stopwatch2.elapsed}");
+          if (cnt > 1) {
+            _sendData();
+            cnt -= 1;
+          }
+        }
         if (_state == FIN_CODE) {
           _client.clntSocket.done;
-          print("time elapsed: ${stopwatch.elapsed}");
+          _stopCon();
+          print("stopwatch2: ${stopwatch2.elapsed}");
+          print("stopwatch1: ${stopwatch1.elapsed}");
         }
       });
     });
   }
 
   void _sendData() async {
+    stopwatch2 = Stopwatch()..start();
     try {
       Uint8List data = await _fl.readFile("${_fl.storagePath}/${_fl.selectedFile}");
-      stopwatch = Stopwatch()..start();
       _client.sendFile(1, data);  // 임시 - 타입 1
     } on FileSystemException {
       print("File not exists: ${_fl.selectedFile}");
